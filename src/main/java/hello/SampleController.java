@@ -1,5 +1,6 @@
 package hello;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -17,6 +18,9 @@ import javax.annotation.PreDestroy;
 public class SampleController implements ApplicationListener<ContextClosedEvent>{
 
     private int requestCount;
+
+    @Autowired
+    private NotificationService notificationService;
 
     private Object lock =  new Object();
 
@@ -44,6 +48,7 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
     String add() {
         incrementRequestCount();
         System.out.println(getRequestCount());
+        notificationService.send("message");
         return "added "+getRequestCount();
     }
 
