@@ -39,6 +39,7 @@ dependencies {
     compile("org.springframework.integration:spring-integration-core:4.2.0.RELEASE")
     compile("org.springframework.integration:spring-integration-jdbc:4.2.0.RELEASE")
     compile("org.springframework:spring-context:4.2.0.RELEASE")
+    compile("org.flywaydb:flyway-core:3.2.1")
 
     testCompile("junit:junit")
 }
