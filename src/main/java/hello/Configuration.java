@@ -8,17 +8,26 @@ import org.springframework.integration.handler.advice.RequestHandlerRetryAdvice;
 import org.springframework.integration.jdbc.store.JdbcChannelMessageStore;
 import org.springframework.integration.jdbc.store.channel.DerbyChannelMessageStoreQueryProvider;
 import org.springframework.integration.store.MessageGroupQueue;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.retry.RetryPolicy;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.AlwaysRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.annotation.TransactionManagementConfigurer;
+import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
+import org.springframework.transaction.interceptor.MatchAlwaysTransactionAttributeSource;
+import org.springframework.transaction.interceptor.TransactionInterceptor;
 
 import javax.sql.DataSource;
 
 @org.springframework.context.annotation.Configuration
-public class Configuration {
+@EnableTransactionManagement
+public class Configuration implements TransactionManagementConfigurer {
 
     @Bean
     public JdbcChannelMessageStore jdbcChannelMessageStore() {
@@ -68,5 +77,33 @@ public class Configuration {
         retryTemplate.setRetryPolicy(retryPolicy);
         retryAdvice.setRetryTemplate(retryTemplate);
         return retryAdvice;
+    }
+
+    @Bean
+    public PlatformTransactionManager txManager() {
+        return new DataSourceTransactionManager(dataSource());
+    }
+
+    @Override
+    public PlatformTransactionManager annotationDrivenTransactionManager() {
+        return txManager();
+    }
+
+    @Bean
+    public TransactionInterceptor txAdvice(){
+        MatchAlwaysTransactionAttributeSource attributeSource = new MatchAlwaysTransactionAttributeSource();
+        attributeSource.setTransactionAttribute(new DefaultTransactionAttribute());
+        TransactionInterceptor interceptor = new TransactionInterceptor(txManager(), attributeSource);
+        return interceptor;
+    }
+
+    @Bean
+    public NotificationService notificationService(){
+        return new NotificationService();
+    }
+
+    @Bean
+    JdbcTemplate jdbcTemplate(){
+        return new JdbcTemplate(dataSource());
     }
 }
