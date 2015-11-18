@@ -1,5 +1,6 @@
 package hello;
 
+import org.jooq.DSLContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -7,8 +8,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.ResourceSupport;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,17 +16,20 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.lang.reflect.InvocationTargetException;
-
 import static java.lang.Class.forName;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.*;
+import static org.jooq.example.gradle.db.app.tables.IntChannelMessage.INT_CHANNEL_MESSAGE;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 @Controller
 @EnableAutoConfiguration
 @SpringBootApplication
-public class SampleController implements ApplicationListener<ContextClosedEvent>{
+public class SampleController implements ApplicationListener<ContextClosedEvent> {
 
     private int requestCount;
+
+    @Autowired
+    private DSLContext connection;
 
     @Autowired
     private NotificationService notificationService;
@@ -35,7 +37,7 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private Object lock =  new Object();
+    private Object lock = new Object();
 
     public int getRequestCount() {
         synchronized (lock) {
@@ -62,7 +64,7 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
         incrementRequestCount();
         System.out.println(getRequestCount());
         notificationService.send("message");
-        return "added "+getRequestCount();
+        return "added " + getRequestCount();
     }
 
     @RequestMapping("/subtract")
@@ -70,7 +72,7 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
     String subtract() {
         decrementRequestCount();
         System.out.println(getRequestCount());
-        return "subtracted "+getRequestCount();
+        return "subtracted " + getRequestCount();
     }
 
 
@@ -78,9 +80,8 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
     @ResponseBody
     String queue() {
         int rowCount = this.jdbcTemplate.queryForObject("select count(*) from INT_CHANNEL_MESSAGE", Integer.class);
-        return ""+rowCount;
+        return "" + rowCount;
     }
-
 
 
     public static void main(String[] args) throws Exception {
@@ -89,9 +90,9 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
 
     @Override
     public void onApplicationEvent(ContextClosedEvent event) {
-        while(getRequestCount()>0){
+        while (getRequestCount() > 0) {
             try {
-                synchronized(lock) {
+                synchronized (lock) {
                     lock.wait();
                 }
             } catch (InterruptedException e) {
@@ -102,10 +103,10 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
 
     @RequestMapping("/db2hal/{clazz}")
     @ResponseBody
-    public Resource getJson(@PathVariable String clazz){
+    public ResponseEntity<Resource> getJson(@PathVariable String clazz) {
         try {
-            Class<?> entityClass = forName("hello."+clazz);
-            return db2hal(entityClass);
+            Class entityClass = forName("org.jooq.example.gradle.db.app.tables.pojos." + clazz);
+            return new ResponseEntity<>(db2hal(entityClass), HttpStatus.OK);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -113,21 +114,7 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
     }
 
     private <T> Resource<T> db2hal(Class<T> clazz) {
-        Resource<T> resource  = null;
-        try {
-            resource = new Resource(clazz.getConstructor().newInstance());
-            resource.add(linkTo(methodOn(SampleController.class).getJson(clazz.getSimpleName())).withSelfRel());
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
-
-        return resource;
+        return new Resource<>((T) connection.selectFrom(INT_CHANNEL_MESSAGE).fetchOneInto(clazz), linkTo(methodOn(SampleController.class).getJson(clazz.getSimpleName())).withSelfRel());
     }
 
 

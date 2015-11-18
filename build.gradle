@@ -48,6 +48,8 @@ dependencies {
     compile("org.flywaydb:flyway-core:3.2.1")
     compile 'org.springframework.hateoas:spring-hateoas:0.19.0.RELEASE'
     compile 'org.jooq:jooq:3.5.4'
+    compile 'org.springframework:spring-oxm:4.2.3.RELEASE'
+    compile 'org.springframework.ws:spring-ws-core:2.2.3.RELEASE'
 
     testCompile("junit:junit")
 }
@@ -67,6 +69,7 @@ def xml = new groovy.xml.MarkupBuilder(writer)
         database() {
         }
         generate() {
+            pojos('true')
         }
         target() {
             packageName('org.jooq.example.gradle.db')
