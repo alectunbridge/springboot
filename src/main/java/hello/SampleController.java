@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.Resources;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.List;
 
 import static java.lang.Class.forName;
 import static org.jooq.example.gradle.db.app.tables.IntChannelMessage.INT_CHANNEL_MESSAGE;
@@ -103,7 +106,7 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
 
     @RequestMapping("/db2hal/{clazz}")
     @ResponseBody
-    public ResponseEntity<Resource> getJson(@PathVariable String clazz) {
+    public ResponseEntity<Resources> getJson(@PathVariable String clazz) {
         try {
             Class entityClass = forName("org.jooq.example.gradle.db.app.tables.pojos." + clazz);
             return new ResponseEntity<>(db2hal(entityClass), HttpStatus.OK);
@@ -113,8 +116,8 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
         return null;
     }
 
-    private <T> Resource<T> db2hal(Class<T> clazz) {
-        return new Resource<>((T) connection.selectFrom(INT_CHANNEL_MESSAGE).fetchOneInto(clazz), linkTo(methodOn(SampleController.class).getJson(clazz.getSimpleName())).withSelfRel());
+    private Resources<Resource> db2hal(Class clazz) {
+        return new Resources<>((List<Resource>) connection.select().from(INT_CHANNEL_MESSAGE).fetchInto(clazz),linkTo(methodOn(SampleController.class).getJson(clazz.getSimpleName())).withSelfRel());
     }
 
 

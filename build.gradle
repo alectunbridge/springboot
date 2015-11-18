@@ -1,6 +1,3 @@
-import javax.xml.bind.JAXB
-import org.jooq.util.GenerationTool
-
 buildscript {
     repositories {
         mavenCentral()
@@ -9,6 +6,7 @@ buildscript {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:1.2.6.RELEASE"
         classpath "org.jooq:jooq-codegen:3.5.4"
         classpath "org.apache.derby:derby:10.11.1.1"
+        classpath "org.flywaydb:flyway-gradle-plugin:3.2.1"
     }
 }
 
@@ -16,6 +14,14 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'spring-boot'
+apply plugin: 'org.flywaydb.flyway'
+
+flyway {
+    user = "sa"
+    password = ""
+    schemas = ["alec"]
+    url = "jdbc:derby:directory:alec"
+}
 
 jar {
     baseName = 'gs-spring-boot'
@@ -28,6 +34,8 @@ repositories {
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
+
 
 dependencies {
     // tag::jetty[]
@@ -48,6 +56,7 @@ dependencies {
     compile("org.flywaydb:flyway-core:3.2.1")
     compile 'org.springframework.hateoas:spring-hateoas:0.19.0.RELEASE'
     compile 'org.jooq:jooq:3.5.4'
+    compile 'org.jooq:jooq-meta:3.5.4'
     compile 'org.springframework:spring-oxm:4.2.3.RELEASE'
     compile 'org.springframework.ws:spring-ws-core:2.2.3.RELEASE'
 
@@ -56,33 +65,82 @@ dependencies {
 
 // Use your favourite XML builder to construct the code generation configuration file
 // ----------------------------------------------------------------------------------
-def writer = new StringWriter()
-def xml = new groovy.xml.MarkupBuilder(writer)
-        .configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.5.0.xsd') {
-    jdbc() {
-        driver('org.apache.derby.jdbc.EmbeddedDriver')
-        url('jdbc:derby:directory:alec')
-        user('sa')
-        password('')
-    }
-    generator() {
-        database() {
-        }
-        generate() {
-            pojos('true')
-        }
-        target() {
-            packageName('org.jooq.example.gradle.db')
-            directory('src/main/java')
-        }
-    }
-}
+//def writer = new StringWriter()
+//def xml = new groovy.xml.MarkupBuilder(writer)
+//        .configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.5.0.xsd') {
+//    jdbc() {
+//        driver('org.apache.derby.jdbc.EmbeddedDriver')
+//        url('jdbc:derby:directory:alec')
+//        user('sa')
+//        password('')
+//    }
+//    generator() {
+//        database() {
+//        }
+//        generate() {
+//            pojos('true')
+//        }
+//        target() {
+//            packageName('org.jooq.example.gradle.db')
+//            directory('src/main/java')
+//        }
+//    }
+//}
 
 // Run the code generator
 // ----------------------
 //GenerationTool.main(
 //        JAXB.unmarshal(new StringReader(writer.toString()), org.jooq.util.jaxb.Configuration.class)
 //)
+
+//task generateJooqDatabaseSource(type: JavaExec) {
+//    classpath = sourceSets.main.runtimeClasspath
+//    main = 'org.jooq.util.GenerationTool'
+//    args = ['/jooq.xml']
+//    standardOutput = System.out
+//    errorOutput = System.err
+//}
+//
+
+
+task generateJooqDatabaseSource << {
+
+    def writer = new StringWriter()
+    def xml = new groovy.xml.MarkupBuilder(writer)
+            .configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.5.0.xsd') {
+        jdbc() {
+            driver('org.apache.derby.jdbc.EmbeddedDriver')
+            url('jdbc:derby:directory:alec')
+            user('sa')
+            password('')
+        }
+        generator() {
+            database() {
+            }
+            generate() {
+                pojos('true')
+            }
+            target() {
+                packageName('org.jooq.example.gradle.db')
+                directory('src/main/java')
+            }
+        }
+    }
+
+    println "$buildDir"
+    println "[gdl] -----------------------------------------------------"
+    println "[gdl] Executing generate task"
+    println "[gdl] -----------------------------------------------------"
+    println writer.toString()
+    println "[gdl] -----------------------------------------------------"
+
+    org.jooq.util.GenerationTool.generate(
+            javax.xml.bind.JAXB.unmarshal(new StringReader(writer.toString()), org.jooq.util.jaxb.Configuration.class)
+    )
+}
+
+//compileJava.dependsOn(generateJooqDatabaseSource)
+//generateJooqDatabaseSource.dependsOn = [processResources, processTestResources]
 
 task wrapper(type: Wrapper) {
     gradleVersion = '2.3'
