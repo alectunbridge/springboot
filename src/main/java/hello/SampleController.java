@@ -1,6 +1,7 @@
 package hello;
 
 import org.jooq.DSLContext;
+import org.jooq.UpdatableRecord;
 import org.jooq.impl.TableImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -122,18 +123,30 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
 
     @RequestMapping(value = "/db2hal/{clazz}", method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity<Resource> postJson(@PathVariable String clazz, @RequestBody Resource resource) {
+    public ResponseEntity<Resource> postJson(@PathVariable String clazz, @RequestBody Object object) {
         try {
             Class entityClass = forName("org.jooq.example.gradle.db.app.tables.pojos." + clazz);
-            return new ResponseEntity<>(hal2db(entityClass), HttpStatus.OK);
+
+            return new ResponseEntity<>(hal2db(entityClass, entityClass.cast(object)), HttpStatus.OK);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    private Resource hal2db(Class entityClass) {
-        //connection.newRecord(DERIVATIVE, derivative).store();
+    private Resource hal2db(Class clazz, Object object) {
+        try {
+            int rowsUpdated = ((UpdatableRecord) connection.newRecord((TableImpl)forName("org.jooq.example.gradle.db.app.tables." + clazz.getSimpleName()).newInstance(), object)).store();
+            if( rowsUpdated == 1 ) {
+                return new Resource(object);
+            } else return null;
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 

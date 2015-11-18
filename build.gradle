@@ -60,48 +60,12 @@ dependencies {
     compile 'org.springframework:spring-oxm:4.2.3.RELEASE'
     compile 'org.springframework.ws:spring-ws-core:2.2.3.RELEASE'
 
+    compile "ch.qos.logback:logback-classic:1.1.3"
+    compile "ch.qos.logback:logback-access:1.1.3"
+    compile "org.slf4j:slf4j-api:1.7.12"
+
     testCompile("junit:junit")
 }
-
-// Use your favourite XML builder to construct the code generation configuration file
-// ----------------------------------------------------------------------------------
-//def writer = new StringWriter()
-//def xml = new groovy.xml.MarkupBuilder(writer)
-//        .configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.5.0.xsd') {
-//    jdbc() {
-//        driver('org.apache.derby.jdbc.EmbeddedDriver')
-//        url('jdbc:derby:directory:alec')
-//        user('sa')
-//        password('')
-//    }
-//    generator() {
-//        database() {
-//        }
-//        generate() {
-//            pojos('true')
-//        }
-//        target() {
-//            packageName('org.jooq.example.gradle.db')
-//            directory('src/main/java')
-//        }
-//    }
-//}
-
-// Run the code generator
-// ----------------------
-//GenerationTool.main(
-//        JAXB.unmarshal(new StringReader(writer.toString()), org.jooq.util.jaxb.Configuration.class)
-//)
-
-//task generateJooqDatabaseSource(type: JavaExec) {
-//    classpath = sourceSets.main.runtimeClasspath
-//    main = 'org.jooq.util.GenerationTool'
-//    args = ['/jooq.xml']
-//    standardOutput = System.out
-//    errorOutput = System.err
-//}
-//
-
 
 task generateJooqDatabaseSource << {
 

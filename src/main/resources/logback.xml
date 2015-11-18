@@ -1,0 +1,22 @@
+<configuration scan="true">
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-6X{requestId} - %-5level - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="vds.file.appender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>./logs/vehicle-data-service.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>./logs/vehicle-data-service.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d %-5p %-6X{requestId} %c - %m%xEx%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="debug">
+        <appender-ref ref="vds.file.appender" />
+    </root>
+</configuration>
