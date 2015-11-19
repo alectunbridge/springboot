@@ -6,7 +6,11 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jooq.DSLContext;
 import org.jooq.UpdatableRecord;
+import org.jooq.example.gradle.db.app.tables.Jam;
+import org.jooq.example.gradle.db.app.tables.records.JamRecord;
 import org.jooq.impl.TableImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -37,6 +41,8 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 @EnableAutoConfiguration
 @SpringBootApplication
 public class SampleController implements ApplicationListener<ContextClosedEvent> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SampleController.class);
 
     private int requestCount;
 
@@ -146,6 +152,23 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
             e.printStackTrace();
         }
         return null;
+    }
+
+    @RequestMapping(value = "/db2hal/{clazz}/{id}", method = RequestMethod.DELETE)
+    public ResponseEntity<String> delete(@PathVariable String clazz, @PathVariable int id){
+        LOGGER.debug("VARS:"+clazz+","+id);
+        try {
+            TableImpl tableClass = (TableImpl)forName("org.jooq.example.gradle.db.app.tables." + clazz).newInstance();
+            int response = connection.delete(tableClass).where(tableClass.getIdentity().getField().equal(id)).execute();
+            return new ResponseEntity<String>(""+response, HttpStatus.OK);
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return new ResponseEntity<String>(HttpStatus.NOT_FOUND);
     }
 
     private <T> TypeReference<T> weirdHelper(Class<T> clazz) {
