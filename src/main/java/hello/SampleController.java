@@ -1,5 +1,9 @@
 package hello;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jooq.DSLContext;
 import org.jooq.UpdatableRecord;
 import org.jooq.impl.TableImpl;
@@ -11,21 +15,21 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.List;
 
 import static java.lang.Class.forName;
-import static org.jooq.example.gradle.db.app.tables.IntChannelMessage.INT_CHANNEL_MESSAGE;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
@@ -123,15 +127,34 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
 
     @RequestMapping(value = "/db2hal/{clazz}", method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity<Resource> postJson(@PathVariable String clazz, @RequestBody Object object) {
+    public ResponseEntity<Resource> postJson(@PathVariable String clazz, HttpEntity<String> httpEntity) {
+        String json = httpEntity.getBody();
         try {
             Class entityClass = forName("org.jooq.example.gradle.db.app.tables.pojos." + clazz);
 
-            return new ResponseEntity<>(hal2db(entityClass, entityClass.cast(object)), HttpStatus.OK);
+            ObjectMapper mapper = new ObjectMapper();
+            Object thing = mapper.readValue(json,entityClass);
+
+            return new ResponseEntity<>(hal2db(entityClass, entityClass.cast(thing)), HttpStatus.OK);
         } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (JsonParseException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private <T> TypeReference<T> weirdHelper(Class<T> clazz) {
+        return new TypeReference<T>() {
+            @Override
+            public Type getType() {
+                return super.getType();
+            }
+        };
     }
 
     private Resource hal2db(Class clazz, Object object) {
