@@ -161,7 +161,8 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
             Object thing = mapper.readValue(json,entityClass);
 
             TableImpl tableClass = (TableImpl)forName("org.jooq.example.gradle.db.app.tables." + clazz).newInstance();
-            UpdatableRecord record = (UpdatableRecord) connection.newRecord(tableClass,thing);
+            UpdatableRecord record = (UpdatableRecord) connection.newRecord(tableClass);
+            record.from(thing);
 
             int rowsUpdated = connection.executeUpdate(record);
             if( rowsUpdated == 1 ) {
