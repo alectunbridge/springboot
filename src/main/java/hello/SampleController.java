@@ -1,13 +1,10 @@
 package hello;
 
 import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jooq.DSLContext;
 import org.jooq.UpdatableRecord;
-import org.jooq.example.gradle.db.app.tables.Jam;
-import org.jooq.example.gradle.db.app.tables.records.JamRecord;
 import org.jooq.impl.TableImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.util.List;
 
 import static java.lang.Class.forName;
@@ -141,7 +137,7 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
             ObjectMapper mapper = new ObjectMapper();
             Object thing = mapper.readValue(json,entityClass);
 
-            return new ResponseEntity<>(hal2db(entityClass, entityClass.cast(thing)), HttpStatus.OK);
+            return hal2db(entityClass, entityClass.cast(thing));
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         } catch (JsonMappingException e) {
@@ -154,9 +150,43 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
         return null;
     }
 
+    @RequestMapping(value = "/db2hal/{clazz}", method = RequestMethod.PUT)
+    @ResponseBody
+    public ResponseEntity<Resource> putJson(@PathVariable String clazz, HttpEntity<String> httpEntity) {
+        String json = httpEntity.getBody();
+        try {
+            Class entityClass = forName("org.jooq.example.gradle.db.app.tables.pojos." + clazz);
+
+            ObjectMapper mapper = new ObjectMapper();
+            Object thing = mapper.readValue(json,entityClass);
+
+            TableImpl tableClass = (TableImpl)forName("org.jooq.example.gradle.db.app.tables." + clazz).newInstance();
+            UpdatableRecord record = (UpdatableRecord) connection.newRecord(tableClass,thing);
+
+            int rowsUpdated = connection.executeUpdate(record);
+            if( rowsUpdated == 1 ) {
+                return new  ResponseEntity<>(new Resource(thing), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (JsonParseException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     @RequestMapping(value = "/db2hal/{clazz}/{id}", method = RequestMethod.DELETE)
     public ResponseEntity<String> delete(@PathVariable String clazz, @PathVariable int id){
-        LOGGER.debug("VARS:"+clazz+","+id);
         try {
             TableImpl tableClass = (TableImpl)forName("org.jooq.example.gradle.db.app.tables." + clazz).newInstance();
             int response = connection.delete(tableClass).where(tableClass.getIdentity().getField().equal(id)).execute();
@@ -171,21 +201,12 @@ public class SampleController implements ApplicationListener<ContextClosedEvent>
         return new ResponseEntity<String>(HttpStatus.NOT_FOUND);
     }
 
-    private <T> TypeReference<T> weirdHelper(Class<T> clazz) {
-        return new TypeReference<T>() {
-            @Override
-            public Type getType() {
-                return super.getType();
-            }
-        };
-    }
-
-    private Resource hal2db(Class clazz, Object object) {
+    private ResponseEntity<Resource> hal2db(Class clazz, Object object) {
         try {
             int rowsUpdated = ((UpdatableRecord) connection.newRecord((TableImpl)forName("org.jooq.example.gradle.db.app.tables." + clazz.getSimpleName()).newInstance(), object)).store();
             if( rowsUpdated == 1 ) {
-                return new Resource(object);
-            } else return null;
+                return new ResponseEntity<>(new Resource(object), HttpStatus.OK);
+            } else return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (InstantiationException e) {
             e.printStackTrace();
         } catch (IllegalAccessException e) {
